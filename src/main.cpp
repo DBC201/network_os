@@ -69,30 +69,32 @@ static void mount_fs(const char* src, const char* target, const char* fstype,
 int main() {
     umask(0);
 
-    // Minimal SIGCHLD handler so PID1 reaps children
-    struct sigaction sa{};
-    sa.sa_handler = sigchld_handler;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = SA_NOCLDSTOP | SA_RESTART;
-    sigaction(SIGCHLD, &sa, nullptr);
+    if (!DEBUG) {
+        // Minimal SIGCHLD handler so PID1 reaps children
+        struct sigaction sa{};
+        sa.sa_handler = sigchld_handler;
+        sigemptyset(&sa.sa_mask);
+        sa.sa_flags = SA_NOCLDSTOP | SA_RESTART;
+        sigaction(SIGCHLD, &sa, nullptr);
 
-    // PATH for any helper binaries inside initramfs
-    setenv("PATH", "/bin:/sbin", 1);
+        // PATH for any helper binaries inside initramfs
+        setenv("PATH", "/bin:/sbin", 1);
 
-    // Ensure mount points exist
-    if (!mkdir_p("/dev") || !mkdir_p("/proc") || !mkdir_p("/sys")) {
-        
+        // Ensure mount points exist
+        if (!mkdir_p("/dev") || !mkdir_p("/proc") || !mkdir_p("/sys")) {
+            
+        }
+
+        // If your kernel does NOT have CONFIG_DEVTMPFS_MOUNT=y, uncomment:
+        // mount_fs("devtmpfs", "/dev", "devtmpfs", MS_NOSUID|MS_NOEXEC, "mode=0755");
+
+        // Attach stdio to the kernel console early
+        redirect_stdio_to_console();
+
+        // Mount proc and sysfs
+        mount_fs("proc",  "/proc", "proc",  MS_NOSUID|MS_NOEXEC|MS_NODEV);
+        mount_fs("sysfs", "/sys",  "sysfs", MS_NOSUID|MS_NOEXEC|MS_NODEV);
     }
-
-    // If your kernel does NOT have CONFIG_DEVTMPFS_MOUNT=y, uncomment:
-    // mount_fs("devtmpfs", "/dev", "devtmpfs", MS_NOSUID|MS_NOEXEC, "mode=0755");
-
-    // Attach stdio to the kernel console early
-    redirect_stdio_to_console();
-
-    // Mount proc and sysfs
-    mount_fs("proc",  "/proc", "proc",  MS_NOSUID|MS_NOEXEC|MS_NODEV);
-    mount_fs("sysfs", "/sys",  "sysfs", MS_NOSUID|MS_NOEXEC|MS_NODEV);
 
     std::cout << "hello world" << std::endl;
 

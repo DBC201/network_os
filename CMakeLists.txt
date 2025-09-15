@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.28)
 project(network_os)
 set(CMAKE_CXX_STANDARD 20)
 
+add_executable(init_debug ${CMAKE_SOURCE_DIR}/src/main.cpp)
+target_compile_definitions(init_debug PUBLIC DEBUG=1)
+
 # --- Build the init binary (statically linked) ---
 add_executable(init ${CMAKE_SOURCE_DIR}/src/main.cpp)
 
@@ -9,6 +12,7 @@ add_executable(init ${CMAKE_SOURCE_DIR}/src/main.cpp)
 set_target_properties(init PROPERTIES
     LINK_FLAGS "-static"
 )
+target_compile_definitions(init PUBLIC DEBUG=0)
 
 # Output archive
 set(INITRAMFS_OUT ${CMAKE_BINARY_DIR}/initramfs.cpio.gz)
@@ -56,11 +60,11 @@ add_custom_command(
   COMMENT "Creating ${INITRAMFS_OUT}"
 )
 
-add_custom_target(initramfs ALL DEPENDS ${INITRAMFS_OUT})
+add_custom_target(create_initramfs ALL DEPENDS ${INITRAMFS_OUT})
 
 # Convenience message
-add_custom_target(print_initramfs_info ALL
+add_custom_target(build_initramfs ALL
   COMMAND ${CMAKE_COMMAND} -E echo "Initramfs: ${INITRAMFS_OUT}"
   COMMAND ${CMAKE_COMMAND} -E echo "Root dir:  ${INITRAMFS_ROOT}"
 )
-add_dependencies(print_initramfs_info initramfs)
+add_dependencies(build_initramfs create_initramfs)
