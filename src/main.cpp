@@ -58,18 +58,18 @@ static void redirect_stdio_to_console() {
 static void mount_fs(const char* src, const char* target, const char* fstype,
                      unsigned long flags = 0, const char* data = nullptr) {
     if (mount(src, target, fstype, flags, data) < 0) {
-        // Print a minimal error and drop to shell
         char buf[256];
         const char* err = strerror_r(errno, buf, sizeof(buf)) ? "mount error" : buf;
         write(STDERR_FILENO, "[init] mount failed: ", 21);
-        // handle mount failure
+
+        // TODO: handle mount failure
     }
 }
 
 int main() {
-    umask(0);
-
     if (!DEBUG) {
+        umask(0);
+
         // Minimal SIGCHLD handler so PID1 reaps children
         struct sigaction sa{};
         sa.sa_handler = sigchld_handler;
@@ -82,7 +82,7 @@ int main() {
 
         // Ensure mount points exist
         if (!mkdir_p("/dev") || !mkdir_p("/proc") || !mkdir_p("/sys")) {
-            
+            // TODO: handle mkdir failure
         }
 
         // If your kernel does NOT have CONFIG_DEVTMPFS_MOUNT=y, uncomment:
@@ -96,8 +96,6 @@ int main() {
         mount_fs("sysfs", "/sys",  "sysfs", MS_NOSUID|MS_NOEXEC|MS_NODEV);
     }
 
-    std::cout << "hello world" << std::endl;
-
     char buffer[4096];
     int received_size;
 
@@ -105,10 +103,15 @@ int main() {
         received_size = read(STDIN_FILENO, buffer, sizeof(buffer));
 
         if (received_size < 0) {
+            // TODO: handle stdin closure failure
             continue;
         }
 
         buffer[received_size] = '\0';
+
+        if (received_size > 0 && buffer[received_size - 1] == '\n') {
+            buffer[received_size - 1] = '\0';
+        }
 
         if (std::strcmp(buffer, "shutdown") == 0) {
             reboot(LINUX_REBOOT_CMD_POWER_OFF);
