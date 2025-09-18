@@ -2,16 +2,28 @@ cmake_minimum_required(VERSION 3.28)
 project(network_os)
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(init_debug ${CMAKE_SOURCE_DIR}/src/main.cpp)
+include_directories(
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/external/cpp_socket/include
+    ${CMAKE_SOURCE_DIR}/external/cpp_utils/include
+)
+
+add_executable(init_debug ${CMAKE_SOURCE_DIR}/src/init.cpp)
+add_executable(device_manager_debug ${CMAKE_SOURCE_DIR}/src/device_manager.cpp)
+add_executable(forwarder_debug ${CMAKE_SOURCE_DIR}/src/forwarder.cpp)
 target_compile_definitions(init_debug PUBLIC DEBUG=1)
 
-# --- Build the init binary (statically linked) ---
-add_executable(init ${CMAKE_SOURCE_DIR}/src/main.cpp)
+# --- Link all executables below here statically ---
+set(CMAKE_EXE_LINKER_FLAGS "-static")
+add_executable(init ${CMAKE_SOURCE_DIR}/src/init.cpp)
+add_executable(device_manager ${CMAKE_SOURCE_DIR}/src/device_manager.cpp)
+add_executable(forwarder ${CMAKE_SOURCE_DIR}/src/forwarder.cpp)
+
 
 # Force static linking only for init
-set_target_properties(init PROPERTIES
-    LINK_FLAGS "-static"
-)
+# set_target_properties(init PROPERTIES
+#     LINK_FLAGS "-static"
+# )
 target_compile_definitions(init PUBLIC DEBUG=0)
 
 # Output archive
@@ -33,6 +45,8 @@ add_custom_command(
 
   # Place the compiled binary as /init
   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:init> ${INITRAMFS_ROOT}/init
+  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:device_manager> ${INITRAMFS_ROOT}/bin/device_manager
+  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:forwarder> ${INITRAMFS_ROOT}/bin/forwarder
 
   COMMAND ${CMAKE_COMMAND} -E touch ${INITRAMFS_ROOT}/.staged
   COMMENT "Staging initramfs root at ${INITRAMFS_ROOT}"
