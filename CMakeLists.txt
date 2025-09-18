@@ -13,6 +13,10 @@ add_executable(device_manager_debug ${CMAKE_SOURCE_DIR}/src/device_manager.cpp)
 add_executable(forwarder_debug ${CMAKE_SOURCE_DIR}/src/forwarder.cpp)
 target_compile_definitions(init_debug PUBLIC DEBUG=1)
 
+add_custom_target(all_debug
+    DEPENDS init_debug device_manager_debug forwarder_debug
+)
+
 # --- Link all executables below here statically ---
 set(CMAKE_EXE_LINKER_FLAGS "-static")
 add_executable(init ${CMAKE_SOURCE_DIR}/src/init.cpp)
