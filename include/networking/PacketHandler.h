@@ -152,7 +152,7 @@ class PacketHandler {
         }
 
         for (auto *p = ifs; p; p = p->ifa_next) {
-            if (!p || !p->ifa_name) {
+            if (!p || !p->ifa_name || p->ifa_flags & IFF_LOOPBACK) {
                 continue;
             }
 

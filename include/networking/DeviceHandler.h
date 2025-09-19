@@ -70,6 +70,10 @@ class DeviceHandler {
                 auto* ifi = (ifinfomsg*)NLMSG_DATA(nh);
                 int ifindex = ifi->ifi_index;
                 unsigned ifflags = ifi->ifi_flags;
+
+                if (ifi->ifi_flags & IFF_LOOPBACK) {
+                    continue;
+                }
     
                 // Parse attributes
                 char ifname[IF_NAMESIZE] = {0};
