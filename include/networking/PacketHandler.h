@@ -89,16 +89,15 @@ class PacketHandler {
         // First try to modify (most common case)
         if (epoll_ctl(ep, EPOLL_CTL_MOD, fd, &ev) == -1) {
             if (errno == ENOENT) {
-                // Not yet registered, so add it
-                if (epoll_ctl(ep, EPOLL_CTL_ADD, fd, &ev) == -1) {
-                    // TODO: HANDLE ERROR
-                }
+                // fd not registered
+                // if (epoll_ctl(ep, EPOLL_CTL_ADD, fd, &ev) == -1) {
+                //     // TODO: HANDLE ERROR
+                // }
             } else {
-                // TODO: HANDLE ERROR
+                // TODO: HANDLE ERROR(S)
             }
         }
     }
-    
 
     void register_device(std::string ifname, int mtu) {
         m.lock();
