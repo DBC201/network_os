@@ -80,19 +80,25 @@ class PacketHandler {
 
     void set_epollout(int fd, bool has_output) {
         epoll_event ev{};
+        ev.events = EPOLLIN | EPOLLET;
         if (has_output) {
-            ev.events  = EPOLLIN | EPOLLOUT | EPOLLET;
-        }
-        else {
-            ev.events  = EPOLLIN | EPOLLET;
+            ev.events |= EPOLLOUT;
         }
         ev.data.fd = fd;
-        if (epoll_ctl(ep, EPOLL_CTL_ADD, fd, &ev) == -1) {
-            // Common cases: EEXIST (already added), EBADF/ENOENT (bad fd)
-            // TODO: HANDLE ERROR
-            return;
+    
+        // First try to modify (most common case)
+        if (epoll_ctl(ep, EPOLL_CTL_MOD, fd, &ev) == -1) {
+            if (errno == ENOENT) {
+                // Not yet registered, so add it
+                if (epoll_ctl(ep, EPOLL_CTL_ADD, fd, &ev) == -1) {
+                    // TODO: HANDLE ERROR
+                }
+            } else {
+                // TODO: HANDLE ERROR
+            }
         }
     }
+    
 
     void register_device(std::string ifname, int mtu) {
         m.lock();
@@ -158,7 +164,6 @@ class PacketHandler {
     }
 
     ~PacketHandler() {
-        delete packetSwitch;
         // TODO: CLEAR MAPS AND BUFFER
     }
 
@@ -191,7 +196,6 @@ class PacketHandler {
 
             std::string s(buffer, r);
             std::vector<std::string> tokens = split_by_string(s, " ");
-            std::cout << s << std::endl;
 
             if (tokens[1] == "NEW") {
                 // <ifname> NEW <mac> <mtu>
@@ -235,9 +239,7 @@ class PacketHandler {
             return r;
         }
 
-        std::string out_ifname = packetSwitch->switchPacket(src_ifname, packet, r);
-
-        std::cout << "whoop de doo" << std::endl;
+        std::string out_ifname = packetSwitch.switchPacket(src_ifname, packet, r);
 
         m.lock();
         if (out_ifname != "") {
@@ -288,7 +290,6 @@ class PacketHandler {
                 }
     
                 if (e & EPOLLIN) {
-                    std::cout << "EPOLLIN" << std::endl;
                     while (true) {
                         int r = receive_packet(fd);
                         if (r < 0) {
@@ -299,7 +300,9 @@ class PacketHandler {
                             break;
                         }
                     }
-                } else if (e & EPOLLOUT) {
+                }
+                
+                if (e & EPOLLOUT) {
                     m.lock();
                     if (fdmap.contains(fd)){
                         Ifentry* ifentry = fdmap.at(fd);
@@ -310,7 +313,6 @@ class PacketHandler {
                             if (r < 0) {
                                 break;
                             }
-                            std::cout << "POLLOUT: " << ifentry->rawSocket->get_ifname() << std::endl;
                             ifentry->output_buffer.pop();
                         }
 
@@ -330,7 +332,7 @@ class PacketHandler {
         }
     }
 
-    PacketSwitch* packetSwitch;
+    PacketSwitch packetSwitch;
 
     // ifname, ifentry*
     std::unordered_map<std::string, Ifentry*> namemap;
