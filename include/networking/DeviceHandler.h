@@ -75,6 +75,7 @@ class DeviceHandler {
                 char ifname[IF_NAMESIZE] = {0};
                 unsigned char* mac_bytes = nullptr;
                 int maclen = 0;
+                int mtu = 0;
     
                 int attrlen = nh->nlmsg_len - NLMSG_LENGTH(sizeof(*ifi));
                 for (rtattr* rta = (rtattr*)IFLA_RTA(ifi); RTA_OK(rta, attrlen); rta = RTA_NEXT(rta, attrlen)) {
@@ -85,6 +86,9 @@ class DeviceHandler {
                         case IFLA_ADDRESS:
                             mac_bytes = (unsigned char*)RTA_DATA(rta);
                             maclen = RTA_PAYLOAD(rta);
+                            break;
+                        case IFLA_MTU:
+                            mtu = *(int*)RTA_DATA(rta);
                             break;
                         default:
                             break;
@@ -97,6 +101,7 @@ class DeviceHandler {
                     // ifname NEW mac
                     ifname_str += " NEW ";
                     ifname_str += macToString(mac_bytes, maclen);
+                    ifname_str += " " + std::to_string(mtu);
                 }
                 else if (nh->nlmsg_type == RTM_DELLINK) {
                     //ifname DEL 

@@ -2,7 +2,8 @@
 
 int main(int argc, char** argv) {
     if (argc != 3) {
-        std::cout << "device_manager <abstract listener address> <abstract packet handler address>";
+        std::cout << "device_manager <abstract device_manager address> <abstract forwarder address>" << std::endl;
+        return 0;
     }
 
     DeviceHandler deviceHandler(argv[1], argv[2]);
