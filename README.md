@@ -1,5 +1,5 @@
 # network_os
-An os built on top of linux kernel. Tested and verified with raspberry pi 2b.
+A network os built on top of linux kernel. Tested and verified with raspberry pi 2b.
 
 ## External libraries used
 - Clone [cpp_socket](https://github.com/DBC201/cpp_socket) under ```external/cpp_socket```
