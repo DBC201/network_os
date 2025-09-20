@@ -186,7 +186,7 @@ class PacketHandler {
             bool multicast = (p->ifa_flags & IFF_MULTICAST) != 0;
 
             std::string ifname(p->ifa_name);
-            std::cerr << "Adding " << ifname << std::endl;
+            // std::cerr << "Adding " << ifname << std::endl;
             update_device(p->ifa_name, loopback, broadcast, multicast, 1500);
         }
         
