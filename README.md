@@ -103,7 +103,7 @@ This text specifies which kernel image along with device tree to load.
 - To use the raspberry pi bootloader, download the [relevant raspberry pi image](https://www.raspberrypi.com/software/operating-systems/) (pi 2b is 32 bit). Copy the files in the bootfs partition so your final bootable looks like below:
 ```
 ubuntu@actus-reus:/media/ubuntu/4A21-0000$ ls -l
-total 40544
+total 42138
 -rw-r--r-- 1 ubuntu ubuntu    20858 Sep 15 04:17 bcm2836-rpi-2-b.dtb
 -rw-r--r-- 1 ubuntu ubuntu    52476 May 12 20:06 bootcode.bin
 -rw-r--r-- 1 ubuntu ubuntu       50 Sep 15 05:40 cmdline.txt
@@ -117,6 +117,7 @@ total 40544
 -rw-r--r-- 1 ubuntu ubuntu    10294 May 12 20:06 fixup_db.dat
 -rw-r--r-- 1 ubuntu ubuntu    10290 May 12 20:06 fixup_x.dat
 -rw-r--r-- 1 ubuntu ubuntu   677035 Sep 15 08:33 initramfs.cpio.gz
+-rw-r--r-- 1 ubuntu ubuntu     1594 May 13 03:06 LICENCE.broadcom
 drwxr-xr-x 2 ubuntu ubuntu    32768 May 12 20:06 overlays
 -rw-r--r-- 1 ubuntu ubuntu   814140 May 12 20:06 start4cd.elf
 -rw-r--r-- 1 ubuntu ubuntu  3762408 May 12 20:06 start4db.elf
