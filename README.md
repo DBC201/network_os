@@ -130,3 +130,8 @@ drwxr-xr-x 2 ubuntu ubuntu    32768 May 12 20:06 overlays
 -rw-r--r-- 1 ubuntu ubuntu  3735336 May 12 20:06 start_x.elf
 -rw-r--r-- 1 ubuntu ubuntu 18031104 Sep 15 04:26 zImage
 ```
+
+## Usage
+Currently only simple switch functionality along with a basic shell is implemented.
+
+STP protocols would be the next thing to be added.
