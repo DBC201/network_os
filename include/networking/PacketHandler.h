@@ -7,6 +7,7 @@
 #include <queue>
 #include <ifaddrs.h>
 #include <unordered_set>
+#include <linux/if.h>
 
 #include "linklayer/PacketSwitch.h"
 #include <unix_wrapper/UnixWrapper.h>
@@ -42,8 +43,12 @@ struct Packet {
     }
 };
 
+
 struct Ifentry {
     RawSocket* rawSocket;
+    bool loopback;
+    bool broadcast;
+    bool multicast;
     int mtu;
 
     std::queue<Packet*> output_buffer;
@@ -55,8 +60,11 @@ struct Ifentry {
      * @param rawSocket 
      * @param mtu 
      */
-    Ifentry(RawSocket *rawSocket, int mtu) {
+    Ifentry(RawSocket *rawSocket, bool loopback, bool broadcast, bool multicast, int mtu) {
         this->rawSocket = rawSocket;
+        this->loopback = loopback;
+        this->broadcast = broadcast;
+        this->multicast = multicast;
         this->mtu = mtu;
     }
 
@@ -99,17 +107,29 @@ class PacketHandler {
         }
     }
 
-    void register_device(std::string ifname, int mtu) {
+    void update_device(std::string ifname, bool loopback, bool broadcast, bool multicast, int mtu) {
         m.lock();
         if (!namemap.contains(ifname)) {
             RawSocket* rawSocket = new RawSocket(ifname, PROMISCIOUS, false);
             add_socket(rawSocket->get_socket());
-            Ifentry* ifentry = new Ifentry(rawSocket, mtu);
+            Ifentry* ifentry = new Ifentry(rawSocket, loopback, broadcast, multicast, mtu);
             namemap.insert({ifname, ifentry});
             fdmap.insert({rawSocket->get_socket(), ifentry});
         }
         else if (namemap.at(ifname)->mtu != mtu) {
             namemap.at(ifname)->mtu = mtu;
+        }
+        m.unlock();
+    }
+
+    void remove_device(std::string ifname) {
+        m.lock();
+        if (namemap.contains(ifname)) {
+            Ifentry* ifentry = namemap.at(ifname);
+            packetSwitch.macTable.removeInterface(ifentry->rawSocket->get_ifname());
+            fdmap.erase(ifentry->rawSocket->get_socket());
+            namemap.erase(ifname);
+            delete ifentry;
         }
         m.unlock();
     }
@@ -121,10 +141,8 @@ class PacketHandler {
             fdmap.erase(sockfd);
             std::string ifname = ifentry->rawSocket->get_ifname();
             namemap.erase(ifname);
-            delete ifentry; // this deletes rawsocket, which calls close(fd)
-        }
-        else {
-            // TODO: HANDLE UNEXPECTED BEHAVIOR
+            packetSwitch.macTable.removeInterface(ifentry->rawSocket->get_ifname());
+            delete ifentry;
         }
         m.unlock();
     }
@@ -151,12 +169,16 @@ class PacketHandler {
         }
 
         for (auto *p = ifs; p; p = p->ifa_next) {
-            if (!p || !p->ifa_name || p->ifa_flags & IFF_LOOPBACK) {
+            if (!p || !p->ifa_name || !(p->ifa_flags & IFF_LOWER_UP)) {
                 continue;
             }
 
+            bool loopback = (p->ifa_flags & IFF_LOOPBACK) != 0;
+            bool broadcast = (p->ifa_flags & IFF_BROADCAST) != 0;
+            bool multicast = (p->ifa_flags & IFF_MULTICAST) != 0;
+
             std::string ifname(p->ifa_name);
-            register_device(p->ifa_name, 1500);
+            update_device(p->ifa_name, loopback, broadcast, multicast, 1500);
         }
         
         freeifaddrs(ifs);
@@ -203,7 +225,7 @@ class PacketHandler {
             std::vector<std::string> tokens = split_by_string(s, " ");
 
             if (tokens[1] == "NEW") {
-                // <ifname> NEW <mac> <mtu>
+                // ifname NEW <LOOPBACK,BROADCAST,MULTICAST,LOWER_UP> <mtu> <mac>
 
                 int mtu = convert_string<int>(tokens[3]);
 
@@ -211,7 +233,17 @@ class PacketHandler {
                     mtu = 1500;
                 }
 
-                register_device(tokens[0], mtu);
+                tokens[2].erase(0, 1);
+                tokens[2].erase(s.size() - 1);
+
+                std::vector<std::string> ifflag_tokens = split_by_string(tokens[2], ",");
+                std::unordered_set<std::string> s(ifflag_tokens.begin(), ifflag_tokens.end());
+
+                if (s.contains("LOWER_UP")) {
+                    update_device(tokens[0], s.contains("LOOPBACK"), s.contains("BROADCAST"), s.contains("MULTICAST"), mtu);
+                } else {
+                    remove_device(tokens[0]);
+                }
             }
         }
     }
@@ -297,6 +329,7 @@ class PacketHandler {
                             int err = get_syscall_error();
                             if (err == EAGAIN || err == EWOULDBLOCK) {
                             } else {
+                                // TODO: HANDLE ERROR
                             }
                             break;
                         }
@@ -309,9 +342,14 @@ class PacketHandler {
                         Ifentry* ifentry = fdmap.at(fd);
                         while (!ifentry->output_buffer.empty()) {
                             Packet* packet = ifentry->output_buffer.front();
+
+                            // TODO: check if ifentry exists
+
                             int r = ifentry->rawSocket->send_wrapper((const char*)packet->data, packet->size, 0);
 
                             if (r < 0) {
+                                // TODO: CHECK errno to determine if packet should be dropped or not
+                                // based on if write is blocked or something else
                                 break;
                             }
                             ifentry->output_buffer.pop();

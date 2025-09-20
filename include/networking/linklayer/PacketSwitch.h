@@ -30,8 +30,7 @@ class PacketSwitch {
 
         return "";
     }
-
-    private:
+    
     MacTable macTable;
 };
 

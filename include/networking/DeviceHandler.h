@@ -6,6 +6,8 @@
 #include <unix_wrapper/UnixWrapper.h>
 #include <iomanip>
 
+#include <linux/if.h>
+
 using cpp_socket::netlink::NetlinkWrapper;
 using cpp_socket::netlink::LINK;
 using cpp_socket::netlink::ROUTE;
@@ -70,10 +72,6 @@ class DeviceHandler {
                 auto* ifi = (ifinfomsg*)NLMSG_DATA(nh);
                 int ifindex = ifi->ifi_index;
                 unsigned ifflags = ifi->ifi_flags;
-
-                if (ifi->ifi_flags & IFF_LOOPBACK) {
-                    continue;
-                }
     
                 // Parse attributes
                 char ifname[IF_NAMESIZE] = {0};
@@ -101,11 +99,45 @@ class DeviceHandler {
 
                 std::string ifname_str(ifname);
 
+
                 if (nh->nlmsg_type == RTM_NEWLINK) {
-                    // ifname NEW mac
-                    ifname_str += " NEW ";
-                    ifname_str += macToString(mac_bytes, maclen);
+                    // ifname NEW <LOOPBACK,BROADCAST,MULTICAST,LOWER_UP> <mtu> <mac>
+
+                    ifname_str += " NEW";
+
+                    bool loopback = (ifi->ifi_flags & IFF_LOOPBACK) != 0;
+                    bool broadcast = (ifi->ifi_flags & IFF_BROADCAST) != 0;
+                    bool multicast = (ifi->ifi_flags & IFF_MULTICAST) != 0;
+                    bool lower_up = (ifi->ifi_flags & IFF_LOWER_UP) != 0;
+
+                    ifname_str += " <";
+
+                    std::string ifflags_str = "";
+
+                    if (loopback) {
+                        ifflags_str += "LOOPBACK,";
+                    }
+
+                    if (broadcast) {
+                        ifflags_str += "BROADCAST,";
+                    }
+
+                    if (multicast) {
+                        ifflags_str += "MULTICAST,";
+                    }
+
+                    if (lower_up) {
+                        ifflags_str += "LOWER_UP,";
+                    }
+
+                    if (ifflags_str != "") {
+                        ifflags_str.pop_back();
+                    }
+
+                    ifname_str += ifflags_str + ">";
+
                     ifname_str += " " + std::to_string(mtu);
+                    ifname_str += " "  + macToString(mac_bytes, maclen);
                 }
                 else if (nh->nlmsg_type == RTM_DELLINK) {
                     //ifname DEL 
