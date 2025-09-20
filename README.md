@@ -75,6 +75,15 @@ CONFIG_PRINTK=y
 ```
 - And finally build via ```make -j"$(nproc)" zImage dtbs```
 
+## Building network_os
+This program was developed in Ubuntu.
+Install cmake if you don't have it by ```sudo apt install cmake``
+
+- ```mkdir build && cd build```
+- ```cmake ..```
+- ```make .```
+- See [this section](#booting-the-os) for how to use the build files on raspberry pi 2b.
+
 ## Booting the OS
 ### Raspberry Pi 2b
 #### Custom OS Files
