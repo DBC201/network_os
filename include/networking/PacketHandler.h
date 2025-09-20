@@ -115,7 +115,10 @@ class PacketHandler {
         m.lock();
         if (!namemap.contains(ifname)) {
             RawSocket* rawSocket = new RawSocket(ifname, PROMISCIOUS, false);
-            add_socket(rawSocket->get_socket());
+            if (!loopback) {
+                // do not register loopback for epoll
+                add_socket(rawSocket->get_socket());
+            }
             Ifentry* ifentry = new Ifentry(rawSocket, loopback, broadcast, multicast, mtu);
             namemap.insert({ifname, ifentry});
             fdmap.insert({rawSocket->get_socket(), ifentry});
@@ -290,9 +293,9 @@ class PacketHandler {
             }
         }
         else {
-            // BROADCAST
+            // UNICAST FLOODING
             for (auto it=namemap.begin(); it!=namemap.end(); it++) {
-                if (it->first == src_ifname) {
+                if (it->first == src_ifname || it->second->loopback) {
                     continue;
                 }
                 unsigned char* packet_copy = new unsigned char[frame_size];
