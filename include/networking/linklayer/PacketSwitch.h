@@ -2,7 +2,6 @@
 #define PACKET_SWITCH_H
 
 #include "MacTable.h"
-#include "linklayer_utils.h"
 #include <net/ethernet.h>
 #include <string.h>
 

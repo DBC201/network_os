@@ -7,7 +7,7 @@
 #include <queue>
 #include <ifaddrs.h>
 #include <unordered_set>
-#include <linux/if.h>
+#include <linux/if_link.h>
 
 #include "linklayer/PacketSwitch.h"
 #include <unix_wrapper/UnixWrapper.h>
@@ -20,7 +20,6 @@ using cpp_socket::linklayer::RawSocket;
 using cpp_socket::linklayer::PROMISCIOUS;
 using cpp_utils::string_utils::split_by_string;
 using cpp_utils::string_utils::convert_string;
-using cpp_socket::base::get_syscall_error;
 
 struct Packet {
     unsigned char* data;
@@ -58,6 +57,9 @@ struct Ifentry {
      * Will manage ownership and deletion of *rawSocket
      * 
      * @param rawSocket 
+     * @param loopback 
+     * @param broadcast 
+     * @param multicast 
      * @param mtu 
      */
     Ifentry(RawSocket *rawSocket, bool loopback, bool broadcast, bool multicast, int mtu) {
@@ -101,8 +103,10 @@ class PacketHandler {
                 // if (epoll_ctl(ep, EPOLL_CTL_ADD, fd, &ev) == -1) {
                 //     // TODO: HANDLE ERROR
                 // }
+                perror("Tried to set epollout for unregistered fd.");
             } else {
                 // TODO: HANDLE ERROR(S)
+                perror("Error setting epollout for fd.");
             }
         }
     }
@@ -164,12 +168,13 @@ class PacketHandler {
         ifaddrs *ifs = nullptr;
         
         if (getifaddrs(&ifs) == -1) {
-            perror("getifaddrs");
+            perror("Error updating devices.");
             return;
         }
 
         for (auto *p = ifs; p; p = p->ifa_next) {
-            if (!p || !p->ifa_name || !(p->ifa_flags & IFF_LOWER_UP)) {
+            // IF_LOWER_UP 1 << 16
+            if (!p || !p->ifa_name || !(p->ifa_flags & (1 << 16))) {
                 continue;
             }
 
@@ -185,7 +190,6 @@ class PacketHandler {
     }
 
     ~PacketHandler() {
-        // TODO: CLEAR MAPS AND BUFFER
         for (auto it=namemap.begin(); it!=namemap.end(); it++) {
             delete it->second;
         }
@@ -201,6 +205,7 @@ class PacketHandler {
         ev.data.fd = sockfd;
 
         if (epoll_ctl(ep, EPOLL_CTL_ADD, sockfd, &ev) == -1) {
+            perror("Error adding socket to epoll.");
             // Common cases: EEXIST (already added), EBADF/ENOENT (bad fd)
             // TODO: HANDLE ERROR
             return;
@@ -214,11 +219,11 @@ class PacketHandler {
             int r = unixWrapper.receive_wrapper(buffer, 64, 0);
 
             if (r < 0) {
-                // TODO: HANDLE ERROR
+                perror("Error communicating with device manager.");
             }
             else if (r == 0) {
-                // TODO: HANDLE PIPE CLOSURE
-                continue;
+                std::cerr << "Device manager pipe closed unexpectedly." << std::endl;
+                break;
             };
 
             std::string s(buffer, r);
@@ -248,7 +253,7 @@ class PacketHandler {
         }
     }
 
-    int receive_packet(int fd) {
+    bool receive_packet(int fd) {
         unsigned char* packet;
         int mtu;
         std::string src_ifname;
@@ -258,9 +263,8 @@ class PacketHandler {
             src_ifname = fdmap.at(fd)->rawSocket->get_ifname();
         }
         else {
-            // TODO: HANDLE UNEXPECTED BEHAVIOR
             m.unlock();
-            return -1;
+            return false;
         }
         m.unlock();
         int frame_size = mtu + sizeof(ether_header);
@@ -269,12 +273,15 @@ class PacketHandler {
         int r = recv(fd, packet, frame_size, 0);
 
         if (r < 0) {
-            return r;
+            if (errno != EWOULDBLOCK && errno != EAGAIN) {
+                remove_socket(fd);
+            }
+            return false;
         }
 
+        m.lock();
         std::string out_ifname = packetSwitch.switchPacket(src_ifname, packet, r);
 
-        m.lock();
         if (out_ifname != "") {
             if (namemap.contains(out_ifname)) {
                 Ifentry *ifentry = namemap.at(out_ifname);
@@ -297,7 +304,7 @@ class PacketHandler {
         }
         m.unlock();
 
-        return r;
+        return true;
     }
     
     void packet_processor() {
@@ -307,7 +314,7 @@ class PacketHandler {
             int n = epoll_wait(ep, events.data(), static_cast<int>(events.size()), -1);
             if (n < 0) {
                 if (errno == EINTR) continue;
-                std::cerr << "epoll_wait: " << errno << std::endl;
+                perror("epoll_wait threw an error.");
                 break;
             }
 
@@ -323,16 +330,8 @@ class PacketHandler {
                 }
     
                 if (e & EPOLLIN) {
-                    while (true) {
-                        int r = receive_packet(fd);
-                        if (r < 0) {
-                            int err = get_syscall_error();
-                            if (err == EAGAIN || err == EWOULDBLOCK) {
-                            } else {
-                                // TODO: HANDLE ERROR
-                            }
-                            break;
-                        }
+                    while (receive_packet(fd)) {
+                        
                     }
                 }
                 
@@ -342,17 +341,15 @@ class PacketHandler {
                         Ifentry* ifentry = fdmap.at(fd);
                         while (!ifentry->output_buffer.empty()) {
                             Packet* packet = ifentry->output_buffer.front();
-
-                            // TODO: check if ifentry exists
-
                             int r = ifentry->rawSocket->send_wrapper((const char*)packet->data, packet->size, 0);
 
-                            if (r < 0) {
-                                // TODO: CHECK errno to determine if packet should be dropped or not
-                                // based on if write is blocked or something else
+                            if (r < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+                                ifentry->output_buffer.pop();
                                 break;
                             }
-                            ifentry->output_buffer.pop();
+                            else if (r < 0) {
+                                break;
+                            }
                         }
 
                         if (ifentry->output_buffer.empty()) {

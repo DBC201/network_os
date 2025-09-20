@@ -6,12 +6,11 @@
 #include <unix_wrapper/UnixWrapper.h>
 #include <iomanip>
 
-#include <linux/if.h>
+#include <linux/if_link.h>
 
 using cpp_socket::netlink::NetlinkWrapper;
 using cpp_socket::netlink::LINK;
 using cpp_socket::netlink::ROUTE;
-using cpp_socket::base::get_syscall_error;
 using cpp_socket::unix_wrapper::UnixWrapper;
 
 
@@ -39,14 +38,11 @@ class DeviceHandler {
             int n = netlinkWrapper->receive_wrapper(buf.data(), buf.size(), 0);
     
             if (n < 0) {
-                int err = get_syscall_error();
-                if (err == EINTR) {
+                if (errno == EINTR) {
                     continue; // since blocking call may get interrupted via kernel mid read
                 }
     
-                std::cout << "Error occured with code: " << err << std::endl;
-                
-                // TODO: Handle error better
+                perror("Error receiving from netlink");
 
                 break;
             }
@@ -54,10 +50,7 @@ class DeviceHandler {
             // Walk all netlink messages in this datagram
             for (nlmsghdr* nh = (nlmsghdr*)buf.data(); NLMSG_OK(nh, (unsigned)n); nh = NLMSG_NEXT(nh, n)) {
                 if (nh->nlmsg_type == NLMSG_ERROR) {
-                    std::cout << "netlink: NLMSG_ERROR\n";
-
-                    // TODO: handle error better
-
+                    std::cerr << "netlink: NLMSG_ERROR" << std::endl;
                     continue;
                 }
                 if (nh->nlmsg_type == NLMSG_DONE) {
@@ -108,7 +101,7 @@ class DeviceHandler {
                     bool loopback = (ifi->ifi_flags & IFF_LOOPBACK) != 0;
                     bool broadcast = (ifi->ifi_flags & IFF_BROADCAST) != 0;
                     bool multicast = (ifi->ifi_flags & IFF_MULTICAST) != 0;
-                    bool lower_up = (ifi->ifi_flags & IFF_LOWER_UP) != 0;
+                    bool lower_up = (ifi->ifi_flags & (1 << 16)) != 0; // IF_LOWER_UP 1 << 16
 
                     ifname_str += " <";
 
