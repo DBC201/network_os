@@ -186,6 +186,7 @@ class PacketHandler {
             bool multicast = (p->ifa_flags & IFF_MULTICAST) != 0;
 
             std::string ifname(p->ifa_name);
+            std::cerr << "Adding " << ifname << std::endl;
             update_device(p->ifa_name, loopback, broadcast, multicast, 1500);
         }
         
@@ -298,8 +299,8 @@ class PacketHandler {
                 if (it->first == src_ifname || it->second->loopback) {
                     continue;
                 }
-                unsigned char* packet_copy = new unsigned char[frame_size];
-                memcpy(packet_copy, packet, frame_size);
+                unsigned char* packet_copy = new unsigned char[r];
+                memcpy(packet_copy, packet, r);
                 it->second->output_buffer.push(new Packet(packet_copy, r));
                 set_epollout(it->second->rawSocket->get_socket(), true);
             }
@@ -353,6 +354,7 @@ class PacketHandler {
                             else if (r < 0) {
                                 break;
                             }
+                            ifentry->output_buffer.pop();
                         }
 
                         if (ifentry->output_buffer.empty()) {
