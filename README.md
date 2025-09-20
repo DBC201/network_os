@@ -8,7 +8,8 @@ A network os built on top of linux kernel. Tested and verified with raspberry pi
 ## Building the Linux kernel
 
 ### Linux
-- ```git clone git@github.com:torvalds/linux.git``` or use https
+- ```git clone https://github.com/torvalds/linux.git```
+- The commit I used: ```cd linux && git checkout f83a4f2a4d8c485922fba3018a64fc8f4cfd315f```
 - Set environment variables. Ex. for raspberry pi: ```export ARCH=arm``` and ```export CROSS_COMPILE=arm-linux-gnueabihf-``` 
 - Generate template config. ```make multi_v7_defconfig```
 - Add the following to the genereated .config file:
