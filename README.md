@@ -88,8 +88,8 @@ Install cmake if you don't have it by ```sudo apt install cmake```
 ## Booting the OS
 ### Raspberry Pi 2b
 #### Custom OS Files
-- Put ```/arch/arm/boot/zImage``` to the bootable drive
-- Put ```/arch/arm/boot/dts/broadcom/bcm2836-rpi-2-b.dtb``` to the bootable drive
+- Put ```/arch/arm/boot/zImage``` built by linux kernel to the bootable drive
+- Put ```/arch/arm/boot/dts/broadcom/bcm2836-rpi-2-b.dtb``` built by linux kernel to the bootable drive
 - Build this project in cmake and put the ```build/initramfs.cpio.gz``` to the bootable drive
 #### Bootloader
 - create cmdline.txt and paste this text: ```console=serial0,115200 console=tty1 rdinit=/init``` This text specifies to output console to hdmi.
