@@ -12,7 +12,7 @@ A network os built on top of linux kernel. Tested and verified with raspberry pi
 - The commit I used: ```cd linux && git checkout f83a4f2a4d8c485922fba3018a64fc8f4cfd315f```
 - Set environment variables. Ex. for raspberry pi: ```export ARCH=arm``` and ```export CROSS_COMPILE=arm-linux-gnueabihf-``` 
 - Generate template config. ```make multi_v7_defconfig```
-- Add the following to the genereated .config file:
+- Add the following to the generated .config file:
 ```
 #
 # Networking etc.
