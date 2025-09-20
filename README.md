@@ -77,7 +77,7 @@ CONFIG_PRINTK=y
 
 ## Building network_os
 This program was developed in Ubuntu.
-Install cmake if you don't have it by ```sudo apt install cmake``
+Install cmake if you don't have it by ```sudo apt install cmake```
 
 - ```mkdir build && cd build```
 - ```cmake ..```
