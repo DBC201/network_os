@@ -233,10 +233,6 @@ class PacketHandler {
         m.unlock();
         int frame_size = mtu + sizeof(ether_header);
 
-        // To improve performance by not acquiring lock for every packet
-        // it is possible to move the above part outside the loop
-        // However, this would result in more drops if mtu changes mid read
-        // Probably the latter is better for performance but I'll consider this later
         packet = new unsigned char[frame_size];
         int r = recv(fd, packet, frame_size, 0);
 
