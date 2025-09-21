@@ -10,23 +10,16 @@
 #include <sys/mount.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <sys/wait.h>
 #include <unistd.h>
-
+#include <poll.h>
 #include <iostream>
+#include <linux/reboot.h>
+#include <sys/reboot.h>
+
+#include "shell_utils.h"
 
 static void set_umask_zero() {
     umask(0);
-}
-
-// Reap any children (PID1 must do this)
-static void sigchld_handler(int) {
-    // Reap as many as have exited
-    while (1) {
-        int status;
-        pid_t pid = waitpid(-1, &status, WNOHANG);
-        if (pid <= 0) break;
-    }
 }
 
 static bool mkdir_p(const char* path, mode_t mode = 0755) {
@@ -72,12 +65,7 @@ static void mount_fs(const char* src, const char* target, const char* fstype,
 void init_os() {
     umask(0);
 
-    // Minimal SIGCHLD handler so PID1 reaps children
-    struct sigaction sa{};
-    sa.sa_handler = sigchld_handler;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = SA_NOCLDSTOP | SA_RESTART;
-    sigaction(SIGCHLD, &sa, nullptr);
+    init_reaper();
 
     // PATH for any helper binaries inside initramfs
     setenv("PATH", "/bin:/sbin", 1);
@@ -96,6 +84,31 @@ void init_os() {
     // Mount proc and sysfs
     mount_fs("proc",  "/proc", "proc",  MS_NOSUID|MS_NOEXEC|MS_NODEV);
     mount_fs("sysfs", "/sys",  "sysfs", MS_NOSUID|MS_NOEXEC|MS_NODEV);
+}
+
+void emergency_shutdown() {
+    std::cerr << "Attempting shutdown to prevent kernel panic." << std::endl;
+    std::cerr << "Press Enter to shutdown immediately." << std::endl;
+    std::cerr << "System will shut down in 10 seconds." << std::endl;
+
+    struct pollfd pfd;
+    pfd.fd = STDIN_FILENO;
+    pfd.events = POLLIN;
+
+    int ret = poll(&pfd, 1, 10000);
+
+    if (ret > 0) {
+        char buf[1];
+        read(STDIN_FILENO, buf, 1);
+        std::cerr << "Shutting down now (user input).\n";
+    } else if (ret == 0) {
+        std::cerr << "No input detected, shutting down after 10s timeout.\n";
+    } else {
+        perror("poll");
+        sleep(10);
+    }
+    
+    reboot(LINUX_REBOOT_CMD_POWER_OFF);
 }
 
 #endif

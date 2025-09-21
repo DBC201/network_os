@@ -18,7 +18,7 @@
 using cpp_socket::unix_wrapper::UnixWrapper;
 using cpp_socket::linklayer::RawSocket;
 using cpp_socket::linklayer::PROMISCIOUS;
-using cpp_utils::string_utils::split_by_string;
+using cpp_utils::string_utils::split;
 using cpp_utils::string_utils::convert_string;
 
 struct Packet {
@@ -231,7 +231,7 @@ class PacketHandler {
             };
 
             std::string s(buffer, r);
-            std::vector<std::string> tokens = split_by_string(s, " ");
+            std::vector<std::string> tokens = split(s, ' ');
 
             if (tokens[1] == "NEW") {
                 // ifname NEW <LOOPBACK,BROADCAST,MULTICAST,LOWER_UP> <mtu> <mac>
@@ -245,7 +245,7 @@ class PacketHandler {
                 tokens[2].erase(0, 1);
                 tokens[2].erase(s.size() - 1);
 
-                std::vector<std::string> ifflag_tokens = split_by_string(tokens[2], ",");
+                std::vector<std::string> ifflag_tokens = split(tokens[2], ',');
                 std::unordered_set<std::string> s(ifflag_tokens.begin(), ifflag_tokens.end());
 
                 if (s.contains("LOWER_UP")) {

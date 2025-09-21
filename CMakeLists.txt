@@ -11,9 +11,9 @@ include_directories(
 add_executable(init_debug ${CMAKE_SOURCE_DIR}/src/init.cpp)
 target_compile_definitions(init_debug PUBLIC DEBUG=1)
 
-add_custom_target(all_debug
-    DEPENDS init_debug device_manager_debug forwarder_debug
-)
+# add_custom_target(all_debug
+#     DEPENDS init_debug device_manager_debug forwarder_debug
+# )
 
 # --- Link all executables below here statically ---
 set(CMAKE_EXE_LINKER_FLAGS "-static")
@@ -21,13 +21,16 @@ add_executable(init ${CMAKE_SOURCE_DIR}/src/init.cpp)
 add_executable(device_manager ${CMAKE_SOURCE_DIR}/src/device_manager.cpp)
 add_executable(forwarder ${CMAKE_SOURCE_DIR}/src/forwarder.cpp)
 add_executable(pids ${CMAKE_SOURCE_DIR}/src/pids.cpp)
+add_executable(shell ${CMAKE_SOURCE_DIR}/src/shell.cpp)
 
+add_custom_target(
+    build_os_programs DEPENDS init device_manager forwarder pids shell
+)
 
 # Force static linking only for init
 # set_target_properties(init PROPERTIES
 #     LINK_FLAGS "-static"
 # )
-target_compile_definitions(init PUBLIC DEBUG=0)
 
 # Output archive
 set(INITRAMFS_OUT ${CMAKE_BINARY_DIR}/initramfs.cpio.gz)
@@ -38,8 +41,7 @@ set(INITRAMFS_ROOT ${CMAKE_BINARY_DIR}/initramfs_root)
 # ---- Stage the initramfs tree ------------------------------------------------
 add_custom_command(
   OUTPUT ${INITRAMFS_ROOT}/.staged
-  DEPENDS init
-  COMMAND ${CMAKE_COMMAND} -E rm -rf ${INITRAMFS_ROOT}
+  DEPENDS build_os_programs
   COMMAND ${CMAKE_COMMAND} -E make_directory ${INITRAMFS_ROOT}
   COMMAND ${CMAKE_COMMAND} -E make_directory ${INITRAMFS_ROOT}/bin
   COMMAND ${CMAKE_COMMAND} -E make_directory ${INITRAMFS_ROOT}/proc
@@ -50,19 +52,19 @@ add_custom_command(
   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:init> ${INITRAMFS_ROOT}/init
   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:device_manager> ${INITRAMFS_ROOT}/bin/device_manager
   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:forwarder> ${INITRAMFS_ROOT}/bin/forwarder
+  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:pids> ${INITRAMFS_ROOT}/bin/pids
+  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:shell> ${INITRAMFS_ROOT}/bin/shell
 
   COMMAND ${CMAKE_COMMAND} -E touch ${INITRAMFS_ROOT}/.staged
   COMMENT "Staging initramfs root at ${INITRAMFS_ROOT}"
 )
-
-add_custom_target(stage_initramfs ALL DEPENDS ${INITRAMFS_ROOT}/.staged)
 
 # ---- Pack initramfs.cpio.gz --------------------------------------------------
 set(_initramfs_tmp "${CMAKE_CURRENT_BINARY_DIR}/_initramfs_tmp")
 
 add_custom_command(
   OUTPUT ${INITRAMFS_OUT}
-  DEPENDS stage_initramfs
+  DEPENDS ${INITRAMFS_ROOT}/.staged
   WORKING_DIRECTORY ${INITRAMFS_ROOT}
 
   COMMAND ${CMAKE_COMMAND} -E remove_directory "${_initramfs_tmp}"
@@ -74,14 +76,10 @@ add_custom_command(
   COMMAND gzip -9 -c "${_initramfs_tmp}/initramfs.cpio" > "${INITRAMFS_OUT}"
 
   COMMAND ${CMAKE_COMMAND} -E remove_directory "${_initramfs_tmp}"
-  COMMENT "Creating ${INITRAMFS_OUT}"
-)
 
-add_custom_target(create_initramfs ALL DEPENDS ${INITRAMFS_OUT})
-
-# Convenience message
-add_custom_target(build_initramfs ALL
   COMMAND ${CMAKE_COMMAND} -E echo "Initramfs: ${INITRAMFS_OUT}"
   COMMAND ${CMAKE_COMMAND} -E echo "Root dir:  ${INITRAMFS_ROOT}"
+  COMMAND rm ${INITRAMFS_ROOT}/.staged
 )
-add_dependencies(build_initramfs create_initramfs)
+
+add_custom_target(pack_initramfs ALL DEPENDS ${INITRAMFS_OUT})
