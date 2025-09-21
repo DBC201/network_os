@@ -112,7 +112,12 @@ total 42138
 -rw-r--r-- 1 ubuntu ubuntu     3230 May 12 20:06 fixup4cd.dat
 -rw-r--r-- 1 ubuntu ubuntu     5456 May 12 20:06 fixup4.dat
 -rw-r--r-- 1 ubuntu ubuntu     8449 May 12 20:06 fixup4db.dat
--rw-r--r-- 1 ubuntu ubuntu     8449 May 12 20:06nly a simple switch functionality along with a basic shell is implemented.ramfs.cpio.gz
+-rw-r--r-- 1 ubuntu ubuntu     8449 May 12 20:06 fixup4x.dat
+-rw-r--r-- 1 ubuntu ubuntu     3230 May 12 20:06 fixup_cd.dat
+-rw-r--r-- 1 ubuntu ubuntu     7325 May 12 20:06 fixup.dat
+-rw-r--r-- 1 ubuntu ubuntu    10294 May 12 20:06 fixup_db.dat
+-rw-r--r-- 1 ubuntu ubuntu    10290 May 12 20:06 fixup_x.dat
+-rw-r--r-- 1 ubuntu ubuntu   677035 Sep 15 08:33 initramfs.cpio.gz
 -rw-r--r-- 1 ubuntu ubuntu     1594 May 13 03:06 LICENCE.broadcom
 drwxr-xr-x 2 ubuntu ubuntu    32768 May 12 20:06 overlays
 -rw-r--r-- 1 ubuntu ubuntu   814140 May 12 20:06 start4cd.elf
