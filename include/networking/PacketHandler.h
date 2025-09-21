@@ -103,10 +103,10 @@ class PacketHandler {
                 // if (epoll_ctl(ep, EPOLL_CTL_ADD, fd, &ev) == -1) {
                 //     // TODO: HANDLE ERROR
                 // }
-                perror("Tried to set epollout for unregistered fd.");
+                perror("Tried to set epollout for unregistered fd");
             } else {
                 // TODO: HANDLE ERROR(S)
-                perror("Error setting epollout for fd.");
+                perror("Error setting epollout for fd");
             }
         }
     }
@@ -171,7 +171,7 @@ class PacketHandler {
         ifaddrs *ifs = nullptr;
         
         if (getifaddrs(&ifs) == -1) {
-            perror("Error updating devices.");
+            perror("Error updating devices");
             return;
         }
 
@@ -209,7 +209,7 @@ class PacketHandler {
         ev.data.fd = sockfd;
 
         if (epoll_ctl(ep, EPOLL_CTL_ADD, sockfd, &ev) == -1) {
-            perror("Error adding socket to epoll.");
+            perror("Error adding socket to epoll");
             // Common cases: EEXIST (already added), EBADF/ENOENT (bad fd)
             // TODO: HANDLE ERROR
             return;
@@ -223,7 +223,7 @@ class PacketHandler {
             int r = unixWrapper.receive_wrapper(buffer, 64, 0);
 
             if (r < 0) {
-                perror("Error communicating with device manager.");
+                perror("Error communicating with device manager");
             }
             else if (r == 0) {
                 std::cerr << "Device manager pipe closed unexpectedly." << std::endl;
@@ -318,7 +318,7 @@ class PacketHandler {
             int n = epoll_wait(ep, events.data(), static_cast<int>(events.size()), -1);
             if (n < 0) {
                 if (errno == EINTR) continue;
-                perror("epoll_wait threw an error.");
+                perror("epoll_wait threw an error");
                 break;
             }
 

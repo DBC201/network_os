@@ -41,7 +41,7 @@ pid_t run_process(char** argv) {
     pid_t pid = fork();
 
     if (pid < 0) {
-        perror("Error creating fork.");
+        perror("Error creating fork");
     }
     else if (pid == 0) {
         execvp(argv[0], argv);
@@ -201,7 +201,7 @@ void run_shell() {
             r = kill(pid, signal);
 
             if (r == -1) {
-                perror("Kill failed.");
+                perror("Kill failed");
             }
         }
         else {
