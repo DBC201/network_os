@@ -17,10 +17,11 @@ void run_process(char** argv) {
     pid_t pid = fork();
 
     if (pid < 0) {
-        std::perror("Unrecognized process");
+        perror("Error creating fork.");
     }
     else if (pid == 0) {
         execvp(argv[0], argv);
+        std::cerr << "Unrecognized process: " << argv[0] << std::endl;
         _exit(127); // regular exit is not async signal safe
     }
     else {
