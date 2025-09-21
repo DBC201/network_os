@@ -129,9 +129,9 @@ drwxr-xr-x 2 ubuntu ubuntu    32768 May 12 20:06 overlays
 ## Usage
 Besides the init script and shell, the os consists of two other processes called ```device_manager``` and ```forwarder```.
 
-Device manager is responsible for monitoring status of connected devices and communicate it to the forwarder.
+```device_manager``` is responsible for monitoring status of connected devices and communicate it to the forwarder.
 
-Forwarder does the packet switching between devices.
+```forwarder``` does the packet switching between devices.
 
 They can be started by running ```device_manager <abstract device_manager address> <abstract forwarder address>``` and ```forwarder <abstract forwarder address>```.
 
