@@ -135,7 +135,7 @@ Forwarder does the packet switching between devices.
 
 They can be started by running ```device_manager <abstract device_manager address> <abstract forwarder address>``` and ```forwarder <abstract forwarder address>```.
 
-```abstract forwarder address``` parameter should be the same for both, as it represents the unix socket that device manager writes to and forwarder reads from. For now ```abstract device_manager address``` as it doesn't need to receive any data.
+```abstract forwarder address``` parameter should be the same for both, as it represents the unix socket that device manager writes to and forwarder reads from. For now ```abstract device_manager address``` can be anything as it doesn't need to receive any data.
 
 Currently only a simple switch functionality along with a basic shell is implemented.
 
