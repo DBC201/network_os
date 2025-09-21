@@ -103,32 +103,30 @@ enable_uart=1
 This text specifies which kernel image along with device tree to load.
 - To use the raspberry pi bootloader, download the [relevant raspberry pi image](https://www.raspberrypi.com/software/operating-systems/) (pi 2b is 32 bit). Copy the files in the bootfs partition so your final bootable looks like below:
 ```
-ubuntu@actus-reus:/media/ubuntu/4A21-0000$ ls -l
-total 42138
--rw-r--r-- 1 ubuntu ubuntu    20858 Sep 15 04:17 bcm2836-rpi-2-b.dtb
--rw-r--r-- 1 ubuntu ubuntu    52476 May 12 20:06 bootcode.bin
--rw-r--r-- 1 ubuntu ubuntu       50 Sep 15 05:40 cmdline.txt
--rw-r--r-- 1 ubuntu ubuntu      102 Sep 15 05:39 config.txt
--rw-r--r-- 1 ubuntu ubuntu     3230 May 12 20:06 fixup4cd.dat
--rw-r--r-- 1 ubuntu ubuntu     5456 May 12 20:06 fixup4.dat
--rw-r--r-- 1 ubuntu ubuntu     8449 May 12 20:06 fixup4db.dat
--rw-r--r-- 1 ubuntu ubuntu     8449 May 12 20:06 fixup4x.dat
--rw-r--r-- 1 ubuntu ubuntu     3230 May 12 20:06 fixup_cd.dat
--rw-r--r-- 1 ubuntu ubuntu     7325 May 12 20:06 fixup.dat
--rw-r--r-- 1 ubuntu ubuntu    10294 May 12 20:06 fixup_db.dat
--rw-r--r-- 1 ubuntu ubuntu    10290 May 12 20:06 fixup_x.dat
--rw-r--r-- 1 ubuntu ubuntu   677035 Sep 15 08:33 initramfs.cpio.gz
--rw-r--r-- 1 ubuntu ubuntu     1594 May 13 03:06 LICENCE.broadcom
-drwxr-xr-x 2 ubuntu ubuntu    32768 May 12 20:06 overlays
--rw-r--r-- 1 ubuntu ubuntu   814140 May 12 20:06 start4cd.elf
--rw-r--r-- 1 ubuntu ubuntu  3762408 May 12 20:06 start4db.elf
--rw-r--r-- 1 ubuntu ubuntu  2263968 May 12 20:06 start4.elf
--rw-r--r-- 1 ubuntu ubuntu  3011592 May 12 20:06 start4x.elf
--rw-r--r-- 1 ubuntu ubuntu   814140 May 12 20:06 start_cd.elf
--rw-r--r-- 1 ubuntu ubuntu  4834408 May 12 20:06 start_db.elf
--rw-r--r-- 1 ubuntu ubuntu  2988128 May 12 20:06 start.elf
--rw-r--r-- 1 ubuntu ubuntu  3735336 May 12 20:06 start_x.elf
--rw-r--r-- 1 ubuntu ubuntu 18031104 Sep 15 04:26 zImage
+-rw-r--r-- 1 ubuntu ubuntu    20858 Sep 15 11:17  bcm2836-rpi-2-b.dtb
+-rw-r--r-- 1 ubuntu ubuntu    52476 May 13 03:06  bootcode.bin
+-rw-r--r-- 1 ubuntu ubuntu       50 Sep 15 12:40  cmdline.txt
+-rw-r--r-- 1 ubuntu ubuntu      102 Sep 15 12:39  config.txt
+-rw-r--r-- 1 ubuntu ubuntu     3230 May 13 03:06  fixup4cd.dat
+-rw-r--r-- 1 ubuntu ubuntu     5456 May 13 03:06  fixup4.dat
+-rw-r--r-- 1 ubuntu ubuntu     8449 May 13 03:06  fixup4db.dat
+-rw-r--r-- 1 ubuntu ubuntu     8449 May 13 03:06  fixup4x.dat
+-rw-r--r-- 1 ubuntu ubuntu     3230 May 13 03:06  fixup_cd.dat
+-rw-r--r-- 1 ubuntu ubuntu     7325 May 13 03:06  fixup.dat
+-rw-r--r-- 1 ubuntu ubuntu    10294 May 13 03:06  fixup_db.dat
+-rw-r--r-- 1 ubuntu ubuntu    10290 May 13 03:06  fixup_x.dat
+-rw-r--r-- 1 ubuntu ubuntu  2534485 Sep 21 10:12  initramfs.cpio.gz
+-rw-r--r-- 1 ubuntu ubuntu     1594 May 13 03:06  LICENCE.broadcom
+drwxr-xr-x 2 ubuntu ubuntu    32768 May 13 03:06  overlays
+-rw-r--r-- 1 ubuntu ubuntu   814140 May 13 03:06  start4cd.elf
+-rw-r--r-- 1 ubuntu ubuntu  3762408 May 13 03:06  start4db.elf
+-rw-r--r-- 1 ubuntu ubuntu  2263968 May 13 03:06  start4.elf
+-rw-r--r-- 1 ubuntu ubuntu  3011592 May 13 03:06  start4x.elf
+-rw-r--r-- 1 ubuntu ubuntu   814140 May 13 03:06  start_cd.elf
+-rw-r--r-- 1 ubuntu ubuntu  4834408 May 13 03:06  start_db.elf
+-rw-r--r-- 1 ubuntu ubuntu  2988128 May 13 03:06  start.elf
+-rw-r--r-- 1 ubuntu ubuntu  3735336 May 13 03:06  start_x.elf
+-rw-r--r-- 1 ubuntu ubuntu 18031104 Sep 15 11:26  zImage
 ```
 
 ## Usage
