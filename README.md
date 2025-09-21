@@ -130,7 +130,7 @@ drwxr-xr-x 2 ubuntu ubuntu    32768 May 13 03:06  overlays
 ```
 
 ## Usage
-Besides the init script and shell, the os consists of two other processes called ```device_manager``` and ```forwarder```.
+Besides the init script, shell and pids(prints out active processes); the os consists of two other processes called ```device_manager``` and ```forwarder```.
 
 ```device_manager``` is responsible for monitoring status of connected devices and communicate it to the forwarder.
 
