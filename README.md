@@ -140,6 +140,8 @@ They can be started by running ```device_manager <abstract device_manager addres
 
 ```abstract forwarder address``` parameter should be the same for both, as it represents the unix socket that device manager writes to and forwarder reads from. For now, ```abstract device_manager address``` can be anything as it doesn't need to receive any data.
 
+```pids``` command can be used to list active processes, and they can be killed with a ```kill``` command.
+
 Currently only a simple switch functionality along with a basic shell is implemented.
 
 STP protocols would be the next thing to be added.
