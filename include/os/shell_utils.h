@@ -73,6 +73,8 @@ void list_running_processes() {
             if (cmdline_file.is_open()) {
                 std::getline(cmdline_file, command_name);
                 if (!command_name.empty()) {
+                    std::replace(command_name.begin(), command_name.end(), '\0', ' ');
+                    command_name.pop_back();
                     procs.push_back({pid, command_name});
                 }
             }
