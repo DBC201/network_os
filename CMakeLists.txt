@@ -9,8 +9,6 @@ include_directories(
 )
 
 add_executable(init_debug ${CMAKE_SOURCE_DIR}/src/init.cpp)
-add_executable(device_manager_debug ${CMAKE_SOURCE_DIR}/src/device_manager.cpp)
-add_executable(forwarder_debug ${CMAKE_SOURCE_DIR}/src/forwarder.cpp)
 target_compile_definitions(init_debug PUBLIC DEBUG=1)
 
 add_custom_target(all_debug
@@ -22,6 +20,7 @@ set(CMAKE_EXE_LINKER_FLAGS "-static")
 add_executable(init ${CMAKE_SOURCE_DIR}/src/init.cpp)
 add_executable(device_manager ${CMAKE_SOURCE_DIR}/src/device_manager.cpp)
 add_executable(forwarder ${CMAKE_SOURCE_DIR}/src/forwarder.cpp)
+add_executable(pids ${CMAKE_SOURCE_DIR}/src/pids.cpp)
 
 
 # Force static linking only for init
