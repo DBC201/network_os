@@ -186,7 +186,6 @@ class PacketHandler {
             bool multicast = (p->ifa_flags & IFF_MULTICAST) != 0;
 
             std::string ifname(p->ifa_name);
-            // std::cerr << "Adding " << ifname << std::endl;
             update_device(p->ifa_name, loopback, broadcast, multicast, 1500);
         }
         
@@ -230,8 +229,8 @@ class PacketHandler {
                 break;
             };
 
-            std::string s(buffer, r);
-            std::vector<std::string> tokens = split(s, ' ');
+            std::string message(buffer, r);
+            std::vector<std::string> tokens = split(message, ' ');
 
             if (tokens[1] == "NEW") {
                 // ifname NEW <LOOPBACK,BROADCAST,MULTICAST,LOWER_UP> <mtu> <mac>
@@ -243,13 +242,13 @@ class PacketHandler {
                 }
 
                 tokens[2].erase(0, 1);
-                tokens[2].erase(s.size() - 1);
+                tokens[2].erase(tokens[2].size() - 1);
 
                 std::vector<std::string> ifflag_tokens = split(tokens[2], ',');
-                std::unordered_set<std::string> s(ifflag_tokens.begin(), ifflag_tokens.end());
+                std::unordered_set<std::string> ifflag_set(ifflag_tokens.begin(), ifflag_tokens.end());
 
-                if (s.contains("LOWER_UP")) {
-                    update_device(tokens[0], s.contains("LOOPBACK"), s.contains("BROADCAST"), s.contains("MULTICAST"), mtu);
+                if (ifflag_set.contains("LOWER_UP")) {
+                    update_device(tokens[0], ifflag_set.contains("LOOPBACK"), ifflag_set.contains("BROADCAST"), ifflag_set.contains("MULTICAST"), mtu);
                 } else {
                     remove_device(tokens[0]);
                 }
