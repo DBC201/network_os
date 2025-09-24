@@ -138,7 +138,7 @@ Implemented processes are listed below:
 
 - ```forwarder``` does the packet switching between devices.
 
-Currently only a simple switch functionality along with a basic shell is implemented.
+Currently only simple switch functionality along with a basic shell is implemented.
 
 STP protocols would be the next thing to be added.
 
