@@ -22,6 +22,7 @@ add_executable(device_manager ${CMAKE_SOURCE_DIR}/src/device_manager.cpp)
 add_executable(forwarder ${CMAKE_SOURCE_DIR}/src/forwarder.cpp)
 add_executable(pids ${CMAKE_SOURCE_DIR}/src/pids.cpp)
 add_executable(shell ${CMAKE_SOURCE_DIR}/src/shell.cpp)
+add_executable(interface ${CMAKE_SOURCE_DIR}/src/interface.cpp)
 
 add_custom_target(
     build_os_programs DEPENDS init device_manager forwarder pids shell
@@ -54,6 +55,7 @@ add_custom_command(
   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:forwarder> ${INITRAMFS_ROOT}/bin/forwarder
   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:pids> ${INITRAMFS_ROOT}/bin/pids
   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:shell> ${INITRAMFS_ROOT}/bin/shell
+  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:interface> ${INITRAMFS_ROOT}/bin/interface
 
   COMMAND ${CMAKE_COMMAND} -E touch ${INITRAMFS_ROOT}/.staged
   COMMENT "Staging initramfs root at ${INITRAMFS_ROOT}"

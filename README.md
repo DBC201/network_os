@@ -130,18 +130,22 @@ drwxr-xr-x 2 ubuntu ubuntu    32768 May 13 03:06  overlays
 ```
 
 ## Usage
-Besides the init script, shell and pids(prints out active processes); the os consists of two other processes called ```device_manager``` and ```forwarder```.
+Implemented processes are listed below:
 
-```device_manager``` is responsible for monitoring status of connected devices and communicate it to the forwarder.
-
-```forwarder``` does the packet switching between devices.
-
-They can be started by running ```device_manager <abstract device_manager address> <abstract forwarder address>``` and ```forwarder <abstract forwarder address>```.
+- ```device_manager``` is responsible for monitoring status of connected devices and communicate it to the forwarder. It can be started with ```device_manager <abstract device_manager address> <abstract forwarder address>```. It works together with the forwarder below.
 
 ```abstract forwarder address``` parameter should be the same for both, as it represents the unix socket that device manager writes to and forwarder reads from. For now, ```abstract device_manager address``` can be anything as it doesn't need to receive any data.
 
-```pids``` command can be used to list active processes, and they can be killed with a ```kill``` command.
+- ```forwarder``` does the packet switching between devices.
 
 Currently only a simple switch functionality along with a basic shell is implemented.
 
 STP protocols would be the next thing to be added.
+
+- ```shell``` is the shell program that can spawn and kill processes.
+
+- ```init``` initializes the shell and prevents kernel panic by ensuring there is always a shell running.
+
+- ```pids``` lists the running processes.
+
+- ```interface``` can be used to set interfaces up and down via ```interface eth0 up```. It can also be used to list available interfaces via ```interface list```.
