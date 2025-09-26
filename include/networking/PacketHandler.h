@@ -347,12 +347,14 @@ class PacketHandler {
 
                             if (r < 0 && errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR) {
                                 ifentry->output_buffer.pop();
+                                delete packet;
                                 break;
                             }
                             else if (r < 0) {
                                 break;
                             }
                             ifentry->output_buffer.pop();
+                            delete packet;
                         }
 
                         if (ifentry->output_buffer.empty()) {
