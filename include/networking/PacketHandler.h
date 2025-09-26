@@ -196,9 +196,8 @@ class PacketHandler {
         for (auto it=namemap.begin(); it!=namemap.end(); it++) {
             delete it->second;
         }
-        for (auto it=fdmap.begin(); it!=fdmap.end(); it++) {
-            delete it->second;
-        }
+        namemap.clear();
+        fdmap.clear();
     }
 
     private:
