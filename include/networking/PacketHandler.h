@@ -276,7 +276,7 @@ class PacketHandler {
         int r = recv(fd, packet, frame_size, 0);
 
         if (r < 0) {
-            if (errno != EWOULDBLOCK && errno != EAGAIN) {
+            if (errno != EWOULDBLOCK && errno != EAGAIN && errno != EINTR) {
                 remove_socket(fd);
             }
             return false;
@@ -346,7 +346,7 @@ class PacketHandler {
                             Packet* packet = ifentry->output_buffer.front();
                             int r = ifentry->rawSocket->send_wrapper((const char*)packet->data, packet->size, 0);
 
-                            if (r < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+                            if (r < 0 && errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR) {
                                 ifentry->output_buffer.pop();
                                 break;
                             }
