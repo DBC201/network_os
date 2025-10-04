@@ -4,6 +4,7 @@
 #include "MacTable.h"
 #include <net/ethernet.h>
 #include <string.h>
+#include "mac_utils.h"
 
 class PacketSwitch {
     public:

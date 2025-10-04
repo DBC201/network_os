@@ -134,17 +134,17 @@ Implemented processes are listed below:
 
 - ```device_manager``` is responsible for monitoring status of connected devices and communicate it to the forwarder. It can be started with ```device_manager <abstract device_manager address> <abstract forwarder address>```. It works together with the forwarder below.
 
-```abstract forwarder address``` parameter should be the same for both, as it represents the unix socket that device manager writes to and forwarder reads from. For now, ```abstract device_manager address``` can be anything as it doesn't need to receive any data.
+    ```abstract forwarder address``` parameter should be the same for both, as it represents the unix socket that device manager writes to and forwarder reads from. For now, ```abstract device_manager address``` can be anything as it doesn't need to receive any data.
 
 - ```forwarder``` does the packet switching between devices.
 
-Currently only simple switch functionality along with a basic shell is implemented.
+    Currently only simple switch functionality along with a basic shell is implemented.
 
-STP protocols would be the next thing to be added.
+    STP protocols would be the next thing to be added.
 
 - ```shell``` is the shell program that can spawn and kill processes.
 
-- ```init``` initializes the shell and prevents kernel panic by ensuring there is always a shell running.
+- ```init``` initializes the shell and prevents kernel panic by ensuring there is always a shell running. It also starts ```forwarder``` and ```device_manager```.
 
 - ```pids``` lists the running processes.
 

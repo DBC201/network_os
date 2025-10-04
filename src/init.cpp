@@ -2,17 +2,32 @@
 #include <os/shell_utils.h>
 
 int main() {
-#ifndef DEBUG
+#ifdef NDEBUG
     init_os();
 #endif
 
-    char* argv[] = { (char*)"shell", nullptr };
+    char* shell_argv[] = { (char*)"shell", nullptr };
+    char* device_manager_argv[] = { (char*)"device_manager", (char*)"devman", (char*)"fwd", nullptr };
+    char* forwarder_argv[] = { (char*)"forwarder", (char*)"fwd", nullptr };
+    
     pid_t shell_pid;
+    
+    pid_t device_manager_pid = run_process(device_manager_argv);
+
+    if (device_manager_pid < 0) {
+        std::cerr << "Unable to start device_manager." << std::endl;
+    }
+
+    pid_t forwarder_pid = run_process(forwarder_argv);
+
+    if (forwarder_pid < 0) {
+        std::cerr << "Unable to start forwarder." << std::endl;
+    }
 
     while (true) {
-        shell_pid = run_process(argv);
+        shell_pid = run_process(shell_argv);
         if (shell_pid < 0) {
-            std::cout << "Unable to start shell." << std::endl;
+            std::cerr << "Unable to start shell." << std::endl;
             emergency_shutdown();
             break;
         }
@@ -25,7 +40,7 @@ int main() {
             emergency_shutdown();
             break;
         } else {
-            std::cout << "Shell stopped with status: " << std::hex << status << std::dec << std::endl;
+            std::cerr << "Shell stopped with status: " << std::hex << status << std::dec << std::endl;
         }
 
         std::cerr << "Restarting shell..." << std::endl;

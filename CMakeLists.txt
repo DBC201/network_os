@@ -8,15 +8,8 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/external/cpp_utils/include
 )
 
-add_executable(init_debug ${CMAKE_SOURCE_DIR}/src/init.cpp)
-target_compile_definitions(init_debug PUBLIC DEBUG=1)
-
-# add_custom_target(all_debug
-#     DEPENDS init_debug device_manager_debug forwarder_debug
-# )
-
 # --- Link all executables below here statically ---
-set(CMAKE_EXE_LINKER_FLAGS "-static")
+set(CMAKE_EXE_LINKER_FLAGS "-static -s")
 add_executable(init ${CMAKE_SOURCE_DIR}/src/init.cpp)
 add_executable(device_manager ${CMAKE_SOURCE_DIR}/src/device_manager.cpp)
 add_executable(forwarder ${CMAKE_SOURCE_DIR}/src/forwarder.cpp)
@@ -24,8 +17,10 @@ add_executable(pids ${CMAKE_SOURCE_DIR}/src/pids.cpp)
 add_executable(shell ${CMAKE_SOURCE_DIR}/src/shell.cpp)
 add_executable(interface ${CMAKE_SOURCE_DIR}/src/interface.cpp)
 
+add_executable(write_frame ${CMAKE_SOURCE_DIR}/test/write_frame.cpp)
+
 add_custom_target(
-    build_os_programs DEPENDS init device_manager forwarder pids shell
+    build_os_programs DEPENDS init device_manager forwarder pids shell interface
 )
 
 # Force static linking only for init

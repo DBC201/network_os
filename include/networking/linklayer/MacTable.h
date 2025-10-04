@@ -3,16 +3,6 @@
 
 #include <unordered_map>
 
-uint64_t pack_mac_bytes(const unsigned char* unpacked) {
-    uint64_t packed = 0;
-
-    for (int i = 0; i < 6; i++) {
-        packed |= static_cast<uint64_t>(unpacked[i]) << (40 - 8*i);
-    }
-
-    return packed;
-}
-
 class MacTable {
     public:
     MacTable() {

@@ -8,12 +8,16 @@
 #include <ifaddrs.h>
 #include <unordered_set>
 #include <linux/if_link.h>
+#include <sys/ioctl.h>
+#include <linux/sockios.h>
+#include <cstring>
 
 #include "linklayer/PacketSwitch.h"
 #include <unix_wrapper/UnixWrapper.h>
 #include <linklayer/RawSocket.h>
 #include <string_utils.h>
 #include <base/SocketWrapper.h>
+#include <networking/linklayer/mac_utils.h>
 
 using cpp_socket::unix_wrapper::UnixWrapper;
 using cpp_socket::linklayer::RawSocket;
@@ -49,6 +53,7 @@ struct Ifentry {
     bool broadcast;
     bool multicast;
     int mtu;
+    uint64_t mac;
 
     std::queue<Packet*> output_buffer;
 
@@ -60,14 +65,16 @@ struct Ifentry {
      * @param loopback 
      * @param broadcast 
      * @param multicast 
-     * @param mtu 
+     * @param mtu
+     * @param mac 
      */
-    Ifentry(RawSocket *rawSocket, bool loopback, bool broadcast, bool multicast, int mtu) {
+    Ifentry(RawSocket *rawSocket, bool loopback, bool broadcast, bool multicast, int mtu, uint64_t mac) {
         this->rawSocket = rawSocket;
         this->loopback = loopback;
         this->broadcast = broadcast;
         this->multicast = multicast;
         this->mtu = mtu;
+        this->mac = mac;
     }
 
     ~Ifentry() {
@@ -111,19 +118,25 @@ class PacketHandler {
         }
     }
 
-    void update_device(std::string ifname, bool loopback, bool broadcast, bool multicast, int mtu) {
+    void update_device(std::string ifname, bool loopback, bool broadcast, bool multicast, int mtu, uint64_t mac) {
         m.lock();
         if (!namemap.contains(ifname)) {
             RawSocket* rawSocket = new RawSocket(ifname, PROMISCIOUS, false);
+            rawSocket->set_ignore_outgoing(1);
             if (!loopback) {
                 // do not register loopback for epoll
                 add_socket(rawSocket->get_socket());
             }
-            Ifentry* ifentry = new Ifentry(rawSocket, loopback, broadcast, multicast, mtu);
+
+            #ifndef NDEBUG
+            std::cerr << "Adding " << rawSocket->get_ifname() << " " << loopback << " " << broadcast << " " << multicast << std::endl;
+            #endif
+            
+            Ifentry* ifentry = new Ifentry(rawSocket, loopback, broadcast, multicast, mtu, mac);
             namemap.insert({ifname, ifentry});
             fdmap.insert({rawSocket->get_socket(), ifentry});
         }
-        else if (namemap.at(ifname)->mtu != mtu) {
+        else {
             namemap.at(ifname)->mtu = mtu;
         }
         m.unlock();
@@ -133,6 +146,7 @@ class PacketHandler {
         m.lock();
         if (namemap.contains(ifname)) {
             Ifentry* ifentry = namemap.at(ifname);
+            std::cerr << "Removing " << ifentry->rawSocket->get_ifname() << std::endl;
             packetSwitch.macTable.removeInterface(ifentry->rawSocket->get_ifname());
             fdmap.erase(ifentry->rawSocket->get_socket());
             namemap.erase(ifname);
@@ -145,6 +159,9 @@ class PacketHandler {
         m.lock();
         if (fdmap.contains(sockfd)) {
             Ifentry* ifentry = fdmap.at(sockfd);
+            #ifndef NDEBUG
+            std::cerr << "Removing " << ifentry->rawSocket->get_ifname() << std::endl;
+            #endif
             fdmap.erase(sockfd);
             std::string ifname = ifentry->rawSocket->get_ifname();
             namemap.erase(ifname);
@@ -162,6 +179,17 @@ class PacketHandler {
         std::thread device_manager_communication_thread([&]() {
             device_manager_communication(address);
         });
+        
+        #ifndef NDEBUG
+        std::thread debug_info_thread([&]() {
+            while (true) {
+                print_mactable();
+                std::this_thread::sleep_for(std::chrono::seconds(5));
+            }
+        });
+
+        debug_info_thread.join();
+        #endif
 
         packet_processor_thread.join();
         device_manager_communication_thread.join();
@@ -169,9 +197,17 @@ class PacketHandler {
 
     void update_devices() {
         ifaddrs *ifs = nullptr;
-        
+
         if (getifaddrs(&ifs) == -1) {
             perror("Error updating devices");
+            return;
+        }
+
+        // Reuse one socket for all ioctls
+        int sock = socket(AF_INET, SOCK_DGRAM, 0);
+        if (sock == -1) {
+            perror("socket");
+            freeifaddrs(ifs);
             return;
         }
 
@@ -181,15 +217,53 @@ class PacketHandler {
                 continue;
             }
 
-            bool loopback = (p->ifa_flags & IFF_LOOPBACK) != 0;
-            bool broadcast = (p->ifa_flags & IFF_BROADCAST) != 0;
-            bool multicast = (p->ifa_flags & IFF_MULTICAST) != 0;
+            bool loopback  = (p->ifa_flags & IFF_LOOPBACK)   != 0;
+            bool broadcast = (p->ifa_flags & IFF_BROADCAST)  != 0;
+            bool multicast = (p->ifa_flags & IFF_MULTICAST)  != 0;
 
-            std::string ifname(p->ifa_name);
-            update_device(p->ifa_name, loopback, broadcast, multicast, 1500);
+            // Get MTU
+            int mtu = 1500; // fallback
+            struct ifreq ifr{};
+            std::strncpy(ifr.ifr_name, p->ifa_name, IFNAMSIZ - 1);
+            if (ioctl(sock, SIOCGIFMTU, &ifr) == 0) {
+                mtu = ifr.ifr_mtu;
+            }
+
+            // Get MAC (only meaningful for Ethernet-like devices)
+            std::string mac;
+            std::memset(&ifr, 0, sizeof(ifr));
+            std::strncpy(ifr.ifr_name, p->ifa_name, IFNAMSIZ - 1);
+            if (ioctl(sock, SIOCGIFHWADDR, &ifr) == 0) {
+                if (ifr.ifr_hwaddr.sa_family == 1) {
+                    const unsigned char* hw = reinterpret_cast<unsigned char*>(ifr.ifr_hwaddr.sa_data);
+                    char buf[18];
+                    std::snprintf(buf, sizeof(buf),
+                                "%02x:%02x:%02x:%02x:%02x:%02x",
+                                hw[0], hw[1], hw[2], hw[3], hw[4], hw[5]);
+                    mac.assign(buf);
+                }
+            }
+
+            // assume update_device(name, loopback, broadcast, multicast, mtu, mac)
+            update_device(p->ifa_name, loopback, broadcast, multicast, mtu, pack_mac_str(mac));
         }
-        
+
+        close(sock);
         freeifaddrs(ifs);
+    }
+
+    void print_mactable() {
+        m.lock();
+        std::cerr << "---------------" << std::endl;
+        for (auto it=packetSwitch.macTable.table.begin(); it!=packetSwitch.macTable.table.end(); it++) {
+            std::cerr << it->first << std::endl;
+            for (auto it2=it->second.begin(); it2!=it->second.end(); it2++) {
+                std::vector<unsigned char> bytes = unpack_mac_bytes(it2->first);
+                std::cerr << "\t" << mac_to_str(bytes.data()) << std::endl;
+            }
+        }
+        std::cerr << "---------------" << std::endl;
+        m.unlock();
     }
 
     ~PacketHandler() {
@@ -233,6 +307,10 @@ class PacketHandler {
 
             if (tokens[1] == "NEW") {
                 // ifname NEW <LOOPBACK,BROADCAST,MULTICAST,LOWER_UP> <mtu> <mac>
+                
+                #ifndef NDEBUG
+                std::cerr << message << std::endl;
+                #endif
 
                 int mtu = convert_string<int>(tokens[3]);
 
@@ -247,7 +325,10 @@ class PacketHandler {
                 std::unordered_set<std::string> ifflag_set(ifflag_tokens.begin(), ifflag_tokens.end());
 
                 if (ifflag_set.contains("LOWER_UP")) {
-                    update_device(tokens[0], ifflag_set.contains("LOOPBACK"), ifflag_set.contains("BROADCAST"), ifflag_set.contains("MULTICAST"), mtu);
+                    update_device(
+                        tokens[0], ifflag_set.contains("LOOPBACK"), 
+                        ifflag_set.contains("BROADCAST"), ifflag_set.contains("MULTICAST"),
+                        mtu, pack_mac_str(tokens[4]));
                 } else {
                     remove_device(tokens[0]);
                 }
@@ -255,6 +336,12 @@ class PacketHandler {
         }
     }
 
+    /**
+     * @brief 
+     * 
+     * @param fd 
+     * @return boolean (Returns false if fd is not readable) 
+     */
     bool receive_packet(int fd) {
         unsigned char* packet;
         int mtu;
@@ -269,7 +356,7 @@ class PacketHandler {
             return false;
         }
         m.unlock();
-        int frame_size = mtu + sizeof(ether_header);
+        int frame_size = sizeof(ether_header) + mtu;
 
         packet = new unsigned char[frame_size];
         int r = recv(fd, packet, frame_size, 0);
@@ -346,8 +433,8 @@ class PacketHandler {
                             int r = ifentry->rawSocket->send_wrapper((const char*)packet->data, packet->size, 0);
 
                             if (r < 0 && errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR) {
-                                ifentry->output_buffer.pop();
                                 delete packet;
+                                remove_socket(fd);
                                 break;
                             }
                             else if (r < 0) {
