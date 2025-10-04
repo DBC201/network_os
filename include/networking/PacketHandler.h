@@ -378,7 +378,9 @@ class PacketHandler {
                 ifentry->output_buffer.push(new Packet(packet, r));
             }
         }
-        else {
+        else if (out_ifname == "DROP") {
+            delete[] packet;
+        } else {
             // UNICAST FLOODING
             for (auto it=namemap.begin(); it!=namemap.end(); it++) {
                 if (it->first == src_ifname || it->second->loopback) {
