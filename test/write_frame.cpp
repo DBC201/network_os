@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
         frame.push_back(0x00);
     }
 
-    for (int i=0; i<10000; i++) {
+    for (int i=0; i<1; i++) {
         int r = rawSocket.send_wrapper((const char*)frame.data(), frame.size(), 0);
         
         if (r < 0) {

@@ -122,7 +122,10 @@ class PacketHandler {
         m.lock();
         if (!namemap.contains(ifname)) {
             RawSocket* rawSocket = new RawSocket(ifname, PROMISCIOUS, false);
+            
+            // To read from dummy interfaces while testing, this needs to be disabled
             rawSocket->set_ignore_outgoing(1);
+            
             if (!loopback) {
                 // do not register loopback for epoll
                 add_socket(rawSocket->get_socket());
@@ -371,16 +374,7 @@ class PacketHandler {
         m.lock();
         std::string out_ifname = packetSwitch.switchPacket(src_ifname, packet, r);
 
-        if (out_ifname != "") {
-            if (namemap.contains(out_ifname)) {
-                Ifentry *ifentry = namemap.at(out_ifname);
-                set_epollout(ifentry->rawSocket->get_socket(), true);
-                ifentry->output_buffer.push(new Packet(packet, r));
-            }
-        }
-        else if (out_ifname == "DROP") {
-            delete[] packet;
-        } else {
+        if (out_ifname == "") {
             // UNICAST FLOODING
             for (auto it=namemap.begin(); it!=namemap.end(); it++) {
                 if (it->first == src_ifname || it->second->loopback) {
@@ -392,6 +386,16 @@ class PacketHandler {
                 set_epollout(it->second->rawSocket->get_socket(), true);
             }
             delete[] packet;
+        } else if (out_ifname == "DROP") {
+            delete[] packet;
+        }
+        else if (namemap.contains(out_ifname)){
+            Ifentry *ifentry = namemap.at(out_ifname);
+            set_epollout(ifentry->rawSocket->get_socket(), true);
+            ifentry->output_buffer.push(new Packet(packet, r));
+        }
+        else {
+            std::cerr << "Switching error to unknown ifname: " << out_ifname << std::endl;
         }
         m.unlock();
 

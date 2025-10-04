@@ -21,6 +21,15 @@ class PacketSwitch {
             return "DROP"; // src mac is broadcast, probably malicious
         }
 
+        uint64_t table_timeout_ns;
+
+        #ifndef NDEBUG
+        table_timeout_ns = (uint64_t)10 * 1000 * 1'000'000;
+        #else
+        table_timeout_ns = (uint64_t)5 * 60 * 1000 * 1'000'000;
+        #endif
+
+        macTable.removeExpired(table_timeout_ns);
         macTable.addEntry(src_ifname, src_mac);
 
         for (auto it=macTable.table.begin(); it!=macTable.table.end(); it++) {
