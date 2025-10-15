@@ -26,7 +26,7 @@ class PacketSwitch {
         #ifndef NDEBUG
         table_timeout_ns = (uint64_t)10 * 1000 * 1'000'000;
         #else
-        table_timeout_ns = (uint64_t)5 * 60 * 1000 * 1'000'000;
+        table_timeout_ns = (uint64_t)10 * 1000 * 1'000'000;
         #endif
 
         macTable.removeExpired(table_timeout_ns);

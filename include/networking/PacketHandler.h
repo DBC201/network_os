@@ -123,18 +123,35 @@ class PacketHandler {
         if (!namemap.contains(ifname)) {
             RawSocket* rawSocket = new RawSocket(ifname, PROMISCIOUS, false);
             
-            // To read from dummy interfaces while testing, this needs to be disabled
-            rawSocket->set_ignore_outgoing(1);
-            
             if (!loopback) {
                 // do not register loopback for epoll
                 add_socket(rawSocket->get_socket());
             }
+            
+            // To read from dummy interfaces while testing, this needs to be disabled
+            rawSocket->set_ignore_outgoing(1);
+
+            // Disable pause frames
+            // rawSocket->set_pause_frames(0);
+
+            int rc = 0;
+            // 1) Turn off RX/TX checksum offload
+            // rc |= rawSocket->ethtool_set_value(ETHTOOL_SRXCSUM, 0);
+            // rc |= rawSocket->ethtool_set_value(ETHTOOL_STXCSUM, 0);
+
+            // 2) Turn off GRO/LRO
+            // rc |= rawSocket->ethtool_set_value(ETHTOOL_SGRO, 0);       // GRO
+            // LRO might be only in flags on older kernels
+            // rc |= rawSocket->ethtool_clear_flags(ETH_FLAG_LRO);
+
+            // 3) Turn off GSO/TSO (generic + specific)
+            // rc |= rawSocket->ethtool_set_value(ETHTOOL_SGSO, 0);       // generic segmentation offload
+            // rc |= rawSocket->ethtool_set_value(ETHTOOL_STSO, 0);       // TCP segmentation offload
 
             #ifndef NDEBUG
-            std::cerr << "Adding " << rawSocket->get_ifname() << " " << loopback << " " << broadcast << " " << multicast << std::endl;
+            std::cerr << "Adding " << rawSocket->get_ifname() << " " << loopback << " " << broadcast << " " << multicast << " " << mtu << std::endl;
             #endif
-            
+
             Ifentry* ifentry = new Ifentry(rawSocket, loopback, broadcast, multicast, mtu, mac);
             namemap.insert({ifname, ifentry});
             fdmap.insert({rawSocket->get_socket(), ifentry});
@@ -149,7 +166,9 @@ class PacketHandler {
         m.lock();
         if (namemap.contains(ifname)) {
             Ifentry* ifentry = namemap.at(ifname);
+            #ifndef NDEBUG
             std::cerr << "Removing " << ifentry->rawSocket->get_ifname() << std::endl;
+            #endif
             packetSwitch.macTable.removeInterface(ifentry->rawSocket->get_ifname());
             fdmap.erase(ifentry->rawSocket->get_socket());
             namemap.erase(ifname);
@@ -395,7 +414,10 @@ class PacketHandler {
             ifentry->output_buffer.push(new Packet(packet, r));
         }
         else {
+            #ifndef NDEBUG
             std::cerr << "Switching error to unknown ifname: " << out_ifname << std::endl;
+            #endif
+            delete[] packet;
         }
         m.unlock();
 
@@ -425,8 +447,10 @@ class PacketHandler {
                 }
     
                 if (e & EPOLLIN) {
-                    while (receive_packet(fd)) {
-                        
+                    for (int i=0; i<10; i++) {
+                        if (!receive_packet(fd)) {
+                            break;
+                        }
                     }
                 }
                 
