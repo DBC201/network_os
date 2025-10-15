@@ -2,9 +2,7 @@
 #include <os/shell_utils.h>
 
 int main() {
-#ifdef NDEBUG
     init_os();
-#endif
 
     char* shell_argv[] = { (char*)"shell", nullptr };
     char* device_manager_argv[] = { (char*)"device_manager", (char*)"devman", (char*)"fwd", nullptr };
