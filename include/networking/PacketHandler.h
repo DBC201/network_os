@@ -294,6 +294,9 @@ class PacketHandler {
         }
         namemap.clear();
         fdmap.clear();
+        if (ep >= 0) {
+            close(ep);
+        }
     }
 
     private:
