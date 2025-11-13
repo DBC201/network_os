@@ -447,10 +447,8 @@ class PacketHandler {
                 }
     
                 if (e & EPOLLIN) {
-                    for (int i=0; i<10; i++) {
-                        if (!receive_packet(fd)) {
-                            break;
-                        }
+                    if (!receive_packet(fd)) {
+                        break;
                     }
                 }
                 
