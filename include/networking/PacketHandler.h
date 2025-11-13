@@ -447,8 +447,7 @@ class PacketHandler {
                 }
     
                 if (e & EPOLLIN) {
-                    if (!receive_packet(fd)) {
-                        break;
+                    while (receive_packet(fd)) {
                     }
                 }
                 
