@@ -95,29 +95,6 @@ class PacketHandler {
         update_devices();
     }
 
-    void set_epollout(int fd, bool has_output) {
-        epoll_event ev{};
-        ev.events = EPOLLIN | EPOLLET;
-        if (has_output) {
-            ev.events |= EPOLLOUT;
-        }
-        ev.data.fd = fd;
-    
-        // First try to modify (most common case)
-        if (epoll_ctl(ep, EPOLL_CTL_MOD, fd, &ev) == -1) {
-            if (errno == ENOENT) {
-                // fd not registered
-                // if (epoll_ctl(ep, EPOLL_CTL_ADD, fd, &ev) == -1) {
-                //     // TODO: HANDLE ERROR
-                // }
-                perror("Tried to set epollout for unregistered fd");
-            } else {
-                // TODO: HANDLE ERROR(S)
-                perror("Error setting epollout for fd");
-            }
-        }
-    }
-
     void update_device(std::string ifname, bool loopback, bool broadcast, bool multicast, int mtu, uint64_t mac) {
         m.lock();
         if (!namemap.contains(ifname)) {
@@ -125,7 +102,7 @@ class PacketHandler {
             
             if (!loopback) {
                 // do not register loopback for epoll
-                add_socket(rawSocket->get_socket());
+                register_socket_epoll(rawSocket->get_socket());
             }
             
             // To read from dummy interfaces while testing, this needs to be disabled
@@ -172,22 +149,6 @@ class PacketHandler {
             packetSwitch.macTable.removeInterface(ifentry->rawSocket->get_ifname());
             fdmap.erase(ifentry->rawSocket->get_socket());
             namemap.erase(ifname);
-            delete ifentry;
-        }
-        m.unlock();
-    }
-
-    void remove_socket(int sockfd) {
-        m.lock();
-        if (fdmap.contains(sockfd)) {
-            Ifentry* ifentry = fdmap.at(sockfd);
-            #ifndef NDEBUG
-            std::cerr << "Removing " << ifentry->rawSocket->get_ifname() << std::endl;
-            #endif
-            fdmap.erase(sockfd);
-            std::string ifname = ifentry->rawSocket->get_ifname();
-            namemap.erase(ifname);
-            packetSwitch.macTable.removeInterface(ifentry->rawSocket->get_ifname());
             delete ifentry;
         }
         m.unlock();
@@ -300,7 +261,12 @@ class PacketHandler {
     }
 
     private:
-    void add_socket(int sockfd) {
+    /**
+     * @brief register the socket for epoll (not thread safe)
+     * 
+     * @param sockfd 
+     */
+    void register_socket_epoll(int sockfd) {
         epoll_event ev{};
         ev.events  = EPOLLIN | EPOLLET;
         ev.data.fd = sockfd;
@@ -310,6 +276,48 @@ class PacketHandler {
             // Common cases: EEXIST (already added), EBADF/ENOENT (bad fd)
             // TODO: HANDLE ERROR
             return;
+        }
+    }
+
+    /**
+     * @brief removes the socket (not thread safe)
+     * 
+     * @param sockfd 
+     */
+    void remove_socket(int sockfd) {
+        if (fdmap.contains(sockfd)) {
+            Ifentry* ifentry = fdmap.at(sockfd);
+            #ifndef NDEBUG
+            std::cerr << "Removing " << ifentry->rawSocket->get_ifname() << std::endl;
+            #endif
+            fdmap.erase(sockfd);
+            std::string ifname = ifentry->rawSocket->get_ifname();
+            namemap.erase(ifname);
+            packetSwitch.macTable.removeInterface(ifentry->rawSocket->get_ifname());
+            delete ifentry;
+        }
+    }
+
+    void set_epollout(int fd, bool has_output) {
+        epoll_event ev{};
+        ev.events = EPOLLIN | EPOLLET;
+        if (has_output) {
+            ev.events |= EPOLLOUT;
+        }
+        ev.data.fd = fd;
+    
+        // First try to modify (most common case)
+        if (epoll_ctl(ep, EPOLL_CTL_MOD, fd, &ev) == -1) {
+            if (errno == ENOENT) {
+                // fd not registered
+                // if (epoll_ctl(ep, EPOLL_CTL_ADD, fd, &ev) == -1) {
+                //     // TODO: HANDLE ERROR
+                // }
+                perror("Tried to set epollout for unregistered fd");
+            } else {
+                // TODO: HANDLE ERROR(S)
+                perror("Error setting epollout for fd");
+            }
         }
     }
 
@@ -362,7 +370,7 @@ class PacketHandler {
     }
 
     /**
-     * @brief 
+     * @brief receive a single packet from fd (not thread safe)
      * 
      * @param fd 
      * @return boolean (Returns false if fd is not readable) 
@@ -371,16 +379,14 @@ class PacketHandler {
         unsigned char* packet;
         int mtu;
         std::string src_ifname;
-        m.lock();
         if (fdmap.contains(fd)) {
             mtu = fdmap.at(fd)->mtu;
             src_ifname = fdmap.at(fd)->rawSocket->get_ifname();
         }
         else {
-            m.unlock();
             return false;
         }
-        m.unlock();
+
         int frame_size = sizeof(ether_header) + mtu;
 
         packet = new unsigned char[frame_size];
@@ -394,7 +400,6 @@ class PacketHandler {
             return false;
         }
 
-        m.lock();
         std::string out_ifname = packetSwitch.switchPacket(src_ifname, packet, r);
 
         if (out_ifname == "") {
@@ -423,7 +428,6 @@ class PacketHandler {
             #endif
             delete[] packet;
         }
-        m.unlock();
 
         return true;
     }
@@ -439,6 +443,7 @@ class PacketHandler {
                 break;
             }
 
+            m.lock();
             for (int i = 0; i < n; ++i) {
                 int fd = events[i].data.fd;
                 uint32_t e = events[i].events;
@@ -456,7 +461,6 @@ class PacketHandler {
                 }
                 
                 if (e & EPOLLOUT) {
-                    m.lock();
                     if (fdmap.contains(fd)){
                         Ifentry* ifentry = fdmap.at(fd);
                         while (!ifentry->output_buffer.empty()) {
@@ -479,9 +483,9 @@ class PacketHandler {
                             set_epollout(ifentry->rawSocket->get_socket(), false);
                         }
                     }
-                    m.unlock();
                 }
             }
+            m.unlock();
     
             // Grow event array if we hit capacity
             if (n == static_cast<int>(events.size())) {
