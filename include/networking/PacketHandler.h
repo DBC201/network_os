@@ -387,6 +387,7 @@ class PacketHandler {
             if (errno != EWOULDBLOCK && errno != EAGAIN && errno != EINTR) {
                 remove_socket(fd);
             }
+            delete[] packet;
             return false;
         }
 
